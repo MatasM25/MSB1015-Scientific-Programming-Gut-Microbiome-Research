@@ -6,6 +6,8 @@ Research Question:  To what extent do longitudinal gut microbiome trajectories a
 Data can be obtained through a publicly available website: https://datadryad.org/dataset/doi:10.5061/dryad.547d7wmfk#citations.  
 Download the zip file -> unzip -> read to be used for your programming
 
+Important: The data is on a public domain, and has no copyright license, therefore the owner allows free distribution of said data.
+
 Data contains: ASV excel file | Inflammatory Biomarkers csv file | Read me markdown file. 
 
 ## Programming Outline - The Steps Followed   
