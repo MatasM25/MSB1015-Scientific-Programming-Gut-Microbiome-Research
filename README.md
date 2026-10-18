@@ -95,7 +95,9 @@ Assuming the user has GitHub and uses git through the software RStudio, if you w
 use git command: mkdir -p plots <br />
 Similarly it can be done to create other folders to save other objects, such as the source code <br />
 <br /> 
-If the user does not have git installed for their environment, then one can follow this link to set it up: https://jennybc.github.io/2014-05-12-ubc/ubc-r/session03_git.html
+If the user does not have git installed for their environment, then one can follow this link to set it up: https://jennybc.github.io/2014-05-12-ubc/ubc-r/session03_git.html <br />
+
+Side Note: For any package that asks for updates when running the script, type "a" in the console, which updates "all" packages and you may proceed forward.
 
 
 
