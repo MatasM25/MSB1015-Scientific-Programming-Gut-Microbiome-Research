@@ -449,6 +449,7 @@ sum(is.na(seq_asv_f_rclr)) # This shows that there is no NA in the data and will
 if(!require("tidyverse")) install.packages("tidyverse") # package required for the horizontal transformation: pivot_longer()
 library(tidyverse)
 packageVersion("tidyverse") # Version: 2.0.0
+# program didn't pick up the package before, so I added it again
 
 clr_long <- as.data.frame(seq_asv_f_clr) %>%
   pivot_longer(cols = everything(), names_to = "ASV", values_to = "Value") %>% # label the columns for the new data frame as you want
