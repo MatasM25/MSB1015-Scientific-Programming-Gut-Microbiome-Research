@@ -439,8 +439,36 @@ sum(is.na(seq_asv_f_rclr)) # This shows that there is no NA in the data and will
 
 # Visualising the newly transformed and filtered data is the next step to see any underlying behaviour in the data that may still persists;
 
+#------------
+# CLR vs rCLR
+#------------
+
+# Combine the data to have a consistent data frame to plot;
+# Firstly, transform the data horizontally (flip) to receive a long format of the data
+
+if(!require("tidyverse")) install.packages("tidyverse") # package required for the horizontal transformation: pivot_longer()
+library(tidyverse)
+packageVersion("tidyverse") # Version: 2.0.0
+
+clr_long <- as.data.frame(seq_asv_f_clr) %>%
+  pivot_longer(cols = everything(), names_to = "ASV", values_to = "Value") %>% # label the columns for the new data frame as you want
+  mutate(Transformation = "CLR")
+
+rclr_long <- as.data.frame(seq_asv_f_rclr) %>%
+  pivot_longer(cols = everything(), names_to = "ASV", values_to = "Value") %>%
+  mutate(Transformation = "rCLR")
+
+clr_rclr_df <- bind_rows(clr_long, rclr_long) %>%
+  filter(!is.na(Value)) # remove any NA values if there appear any, just for the plotting
+
+p20 <- ggplot(clr_rclr_df, aes(x = Transformation, y = Value, fill = Transformation)) + geom_violin(alpha = 0.4) + labs(title = "Difference in distribution W.R.T the transformation (CLR vs rCLR)", x = "Transformation", y = "ASV Values") + facet_wrap(~ Transformation, scales = "free_x") + theme(legend.position = "none") # W.R.T - With Respect To | "free_x" removes the x axis label - zooms into the plots better
+ggsave("plots/p20.png")
+# This shows the difference in the data distribution after transforming the data. We can see that rCLR has a more symmetrical data spread and not such a dense concentration around the origin as CLR has.
+# Additionally, CLR creates the data to be much more right skewed, which is not so adaptive to many downstream statistical testing, including ANOVA.
+
 # PCoA will the choice of visual display - it does not rely on standard euclidean distance matrix, and is considered a gold standard for beta-diversity in microbiome data visualisation
 # The distance metric to explore the data with will be "Bray-Curtis" and possible to explore URF - Unsupervised Random Forest to test how close the data points are to each other for clustering charactersitics;
+
 
 #-------------------------------------------------
 # PCoA - Principle Coordinate Analysis (Aitchison)
@@ -459,19 +487,19 @@ aitchison_distance <- dist(seq_asv_f_rclr, method = "euclidean") # compute the A
 aitchison_pcoa <- cmdscale(aitchison_distance, k = 2, eig = TRUE) # k = 2 is the dimension of the dataset, eigenvalues are true supporting scree plots
 
 # Since the PCoA metrics have been computed, we can construct a data frame to contain our data to them plot it;
-aitchison_df <- data.frame(PC1 = aitchison_pcoa$points[, 1], PC2 = aitchison_pcoa$points[, 2], Treatment = seq_meta$Treatment, Subject_ID = seq_meta$ID) %>% # collecting all points for PC1 from first column and PC2 from second column respectively
-  mutate(distance_centre = sqrt((PC1 - mean(PC1))^2 + (PC2 - mean(PC2))^2), is_outlier = distance_centre > (mean(distance_centre) + 3 * sd(distance_centre))) # calculate the distance from the center of the data to find the majority cluster and set a threshold of 3 standard deviations to be an outlier for the proposed data
+aitchison_df <- data.frame(PCo1 = aitchison_pcoa$points[, 1], PCo2 = aitchison_pcoa$points[, 2], Treatment = seq_meta$Treatment, Subject_ID = seq_meta$ID) %>% # collecting all points for PC1 from first column and PC2 from second column respectively
+  mutate(distance_centre = sqrt((PCo1 - mean(PCo1))^2 + (PCo2 - mean(PCo2))^2), is_outlier = distance_centre > (mean(distance_centre) + 3 * sd(distance_centre))) # calculate the distance from the center of the data to find the majority cluster and set a threshold of 3 standard deviations to be an outlier for the proposed data
 
 # distance_centre is the euclidean distance from the center of the centroid to the data points, following the Pythagorean theorem
 # This helps us define the distance of points and label outliers with distance from the centre of mean with standard deviations.
 
 # We can also add the variance of the data explained to the plots to see the contribution of PCs;
 
-aitchison_var_PC1 <- round((aitchison_pcoa$eig[1] / sum(aitchison_pcoa$eig[aitchison_pcoa$eig > 0])) * 100, 1)
-aitchison_var_PC2 <- round((aitchison_pcoa$eig[2] / sum(aitchison_pcoa$eig[aitchison_pcoa$eig > 0])) * 100, 1)
+aitchison_var_PCo1 <- round((aitchison_pcoa$eig[1] / sum(aitchison_pcoa$eig[aitchison_pcoa$eig > 0])) * 100, 1)
+aitchison_var_PCo2 <- round((aitchison_pcoa$eig[2] / sum(aitchison_pcoa$eig[aitchison_pcoa$eig > 0])) * 100, 1)
 # We also now have information that over 80% of the variance is explained already by PC1 and PC2 combined
 
-p20 <- ggplot(aitchison_df, aes(x = PC1, y = PC2, colour = Treatment)) + geom_point(aes(shape = is_outlier), size = 1, alpha = 0.8) + stat_ellipse(type = "t", linetype = 2, level = 0.95) + geom_text(data = filter(aitchison_df, is_outlier), aes(label = Subject_ID), vjust = -1, colour = "black", size = 1) + labs(title = "Aitchison distance PCoA (rCLR)", x = paste0("PCo1 (", aitchison_var_PC1, "%)"), y = paste0("PCo2 (", aitchison_var_PC2, "%)"))
+p21 <- ggplot(aitchison_df, aes(x = PCo1, y = PCo2, colour = Treatment)) + geom_point(aes(shape = is_outlier), size = 1, alpha = 0.8) + stat_ellipse(type = "t", linetype = 2, level = 0.95) + geom_text(data = filter(aitchison_df, is_outlier), aes(label = Subject_ID), vjust = -1, colour = "black", size = 1) + labs(title = "Aitchison distance PCoA (rCLR)", x = paste0("PCo1 (", aitchison_var_PCo1, "%)"), y = paste0("PCo2 (", aitchison_var_PCo2, "%)"))
 ggsave("plots/p20.png")
 # provides the PCoA plot of PC1 vs PC2 with treatment of diet as the colour coding. The data is mean centered and shows outliers that are 3 sd away from the center, with an ellipse encapsulating the majority of data
 # from the plot one can see 2 direct outliers, but we can verify this with the table summary;
@@ -485,25 +513,25 @@ table(aitchison_df$is_outlier)
 #-------------------------------------
 
 fviz_pcoa <- as_factoextra_pca(ind.coord = aitchison_pcoa$points, eig = aitchison_pcoa$eig) # convert the pcoa object from cmdscale via this function utilising the eigenvalues = TRUE arguement
-p21 <- fviz_eig(fviz_pcoa, addlabels = TRUE, barfill = "blue", barcolor = "blue", linecolor = "red", main = "Scree plot showcasing the PCoAs variance explained (Aitchison)", ylim = c(0, 46))
+p22 <- fviz_eig(fviz_pcoa, addlabels = TRUE, barfill = "blue", barcolor = "blue", linecolor = "red", main = "Scree plot showcasing the PCoAs variance explained (Aitchison)", ylim = c(0, 46))
 ggsave("plots/p21.png")
 # This proves and displays that all the PCs variance (100% )explained with the first 3 PCoA1, 2, and 3;
 
 # We can also see the connection between other PCs;
-aitchison_pcoa_3 <- cmdscale(aitchison_distance, k = 3, eig = TRUE)
+aitchison_PCo3 <- cmdscale(aitchison_distance, k = 3, eig = TRUE)
 # PC1 vs PC3
-aitchison_df_3 <- data.frame(PC1 = aitchison_pcoa_3$points[, 1], PC3 = aitchison_pcoa_3$points[, 3], Treatment = seq_meta$Treatment, Subject_ID = seq_meta$ID) %>% # collecting all points for PC1 from first column and PC2 from second column respectively
-  mutate(distance_centre = sqrt((PC1 - mean(PC1))^2 + (PC3 - mean(PC3))^2), is_outlier = distance_centre > (mean(distance_centre) + 3 * sd(distance_centre))) # calculate the distance from the center of the data to find the majority cluster and set a threshold of 3 standard deviations to be an outlier for the proposed data
+aitchison_df_PCo3 <- data.frame(PCo1 = aitchison_PCo3$points[, 1], PCo3 = aitchison_PCo3$points[, 3], Treatment = seq_meta$Treatment, Subject_ID = seq_meta$ID) %>% # collecting all points for PC1 from first column and PC2 from second column respectively
+  mutate(distance_centre = sqrt((PCo1 - mean(PCo1))^2 + (PCo3 - mean(PCo3))^2), is_outlier = distance_centre > (mean(distance_centre) + 3 * sd(distance_centre))) # calculate the distance from the center of the data to find the majority cluster and set a threshold of 3 standard deviations to be an outlier for the proposed data
 
 # distance_centre is the euclidean distance from the center of the centroid to the data points, following the Pythagorean theorem
 # This helps us define the distance of points and label outliers with distance from the centre of mean with standard deviations.
 
 # We can also add the variance of the data explained to the plots to see the contribution of PCs;
 
-aitchison_var_PC3 <- round((aitchison_pcoa_3$eig[3] / sum(aitchison_pcoa_3$eig[aitchison_pcoa_3$eig > 0])) * 100, 1)
+aitchison_var_PCo3 <- round((aitchison_PCo3$eig[3] / sum(aitchison_PCo3$eig[aitchison_PCo3$eig > 0])) * 100, 1)
 # We also now have information that over 80% of the variance is explained already by PC1 and PC2 combined, which is already very strong values
 
-p22 <- ggplot(aitchison_df_3, aes(x = PC1, y = PC3, colour = Treatment)) + geom_point(aes(shape = is_outlier), size = 1, alpha = 0.8) + stat_ellipse(type = "t", linetype = 2, level = 0.95) + geom_text(data = filter(aitchison_df_3, is_outlier), aes(label = Subject_ID), vjust = -1, colour = "black", size = 1) + labs(title = "Aitchison distance PCoA (rCLR)", x = paste0("PCo1 (", aitchison_var_PC1, "%)"), y = paste0("PCo3 (", aitchison_var_PC3, "%)"))
+p23 <- ggplot(aitchison_df_PCo3, aes(x = PCo1, y = PCo3, colour = Treatment)) + geom_point(aes(shape = is_outlier), size = 1, alpha = 0.8) + stat_ellipse(type = "t", linetype = 2, level = 0.95) + geom_text(data = filter(aitchison_df_PCo3, is_outlier), aes(label = Subject_ID), vjust = -1, colour = "black", size = 1) + labs(title = "Aitchison distance PCoA (rCLR)", x = paste0("PCo1 (", aitchison_var_PCo1, "%)"), y = paste0("PCo3 (", aitchison_var_PCo3, "%)"))
 ggsave("plots/p22.png")
 # No distinct cluster either, more outliers, and much less explained variance. So from my judgement I will stick to PC1 and PC2 for the majority for explained variance of my data
 
@@ -528,9 +556,9 @@ seq_asv_binary <- ifelse(seq_asv_f_rclr > 0, 1, 0)
 jaccard_distance <- vegdist(seq_asv_binary, method = "jaccard")
 jaccard_pcoa <- cmdscale(jaccard_distance, k = 2, eig = TRUE, add = TRUE) # add = TRUE, handles non-euclidean negative eigenvalues, can be seen more in 'Help' in RStudio
 
-jaccard_df <- data.frame(PC1 = jaccard_pcoa$points[, 1], PC2 = jaccard_pcoa$points[, 2], Treatment = seq_meta$Treatment, Week = as.factor(seq_meta$time), Subject_ID = seq_meta$ID) # gather the information from score points and meta data to construct a jaccard data frame viable to use for plotting
+jaccard_df <- data.frame(PCo1 = jaccard_pcoa$points[, 1], PCo2 = jaccard_pcoa$points[, 2], Treatment = seq_meta$Treatment, Week = as.factor(seq_meta$time), Subject_ID = seq_meta$ID) # gather the information from score points and meta data to construct a jaccard data frame viable to use for plotting
 
-p23 <- ggplot(jaccard_df, aes(x = PC1, y = PC2, colour = Treatment, shape = Week)) + geom_point(size = 1, alpha = 0.8) + stat_ellipse(aes(group = Treatment), type = "t", linetype = 2) + labs(title = "Beta diversity Jaccard distance PCoA (rCLR)", subtitle = "Exploring microbial community shifts across treatment and time", x = "PC1", y = "PC2")
+p24 <- ggplot(jaccard_df, aes(x = PCo1, y = PCo2, colour = Treatment, shape = Week)) + geom_point(size = 1, alpha = 0.8) + stat_ellipse(aes(group = Treatment), type = "t", linetype = 2) + labs(title = "Beta diversity Jaccard distance PCoA (rCLR)", subtitle = "Exploring microbial community shifts across treatment and time", x = "PC1", y = "PC2")
 ggsave("plots/p23.png")
 # THIS SHOWS THAT JACCARD INDEX CANNOT BE PLOTTED ACROSS rCLR data because we require binary values, and negative values from rCLR will distort our analysis as seen above;
 
@@ -539,13 +567,13 @@ seq_asv_binary_raw <- ifelse(seq_asv_f_mat > 0, 1, 0) # USE THE "RAW" MATRIX SEQ
 jaccard_distance_raw <- vegdist(seq_asv_binary_raw, method = "jaccard")
 jaccard_pcoa_raw <- cmdscale(jaccard_distance_raw, k = 2, eig = TRUE, add = TRUE) # add = TRUE, handles non-euclidean negative eigenvalues, can be seen more in 'Help' in RStudio
 
-jaccard_df_raw <- data.frame(PC1 = jaccard_pcoa_raw$points[, 1], PC2 = jaccard_pcoa_raw$points[, 2], Treatment = seq_meta$Treatment, Week = as.factor(seq_meta$time), Subject_ID = seq_meta$ID) %>% # gather the information from score points and meta data to construct a jaccard data frame viable to use for plotting
-  mutate(distance_centre = sqrt((PC1 - mean(PC1))^2 + (PC2 - mean(PC2))^2), is_outlier = distance_centre > (mean(distance_centre) + 3 * sd(distance_centre))) # find potential outliers
+jaccard_df_raw <- data.frame(PCo1 = jaccard_pcoa_raw$points[, 1], PCo2 = jaccard_pcoa_raw$points[, 2], Treatment = seq_meta$Treatment, Week = as.factor(seq_meta$time), Subject_ID = seq_meta$ID) %>% # gather the information from score points and meta data to construct a jaccard data frame viable to use for plotting
+  mutate(distance_centre = sqrt((PCo1 - mean(PCo1))^2 + (PCo2 - mean(PCo2))^2), is_outlier = distance_centre > (mean(distance_centre) + 3 * sd(distance_centre))) # find potential outliers
   
-jaccard_var_PC1 <- round((jaccard_pcoa_raw$eig[1] / sum(jaccard_pcoa_raw$eig[jaccard_pcoa_raw$eig > 0])) * 100, 1)
-jaccard_var_PC2 <- round((jaccard_pcoa_raw$eig[2] / sum(jaccard_pcoa_raw$eig[jaccard_pcoa_raw$eig > 0])) * 100, 1)
+jaccard_var_PCo1 <- round((jaccard_pcoa_raw$eig[1] / sum(jaccard_pcoa_raw$eig[jaccard_pcoa_raw$eig > 0])) * 100, 1)
+jaccard_var_PCo2 <- round((jaccard_pcoa_raw$eig[2] / sum(jaccard_pcoa_raw$eig[jaccard_pcoa_raw$eig > 0])) * 100, 1)
 
-p24 <- ggplot(jaccard_df_raw, aes(x = PC1, y = PC2, colour = Treatment)) + geom_point(aes(shape = is_outlier), size = 1, alpha = 0.8) + stat_ellipse(aes(group = Treatment), type = "t", linetype = 2) + labs(title = "Beta diversity Jaccard distance PCoA", subtitle = "Exploring microbial community shifts across treatment", x = paste0("PCo1 (", jaccard_var_PC1, "%)"), y = paste0("PCo2 (", jaccard_var_PC2, "%)"))
+p25 <- ggplot(jaccard_df_raw, aes(x = PCo1, y = PCo2, colour = Treatment)) + geom_point(aes(shape = is_outlier), size = 1, alpha = 0.8) + stat_ellipse(aes(group = Treatment), type = "t", linetype = 2) + labs(title = "Beta diversity Jaccard distance PCoA", subtitle = "Exploring microbial community shifts across treatment", x = paste0("PCo1 (", jaccard_var_PCo1, "%)"), y = paste0("PCo2 (", jaccard_var_PCo2, "%)"))
 ggsave("plots/p24.png")
 # Now this seems much more natural, with some slightly distinctive clusters appearing within the data
 
@@ -566,7 +594,7 @@ table(jaccard_df_raw$is_outlier)
 #---------------------------------------
 
 fviz_pcoa_jac <- as_factoextra_pca(ind.coord = jaccard_pcoa_raw$points, eig = jaccard_pcoa_raw$eig) # convert the pcoa object from cmdscale via this function utilising the eigenvalues = TRUE arguement
-p25 <- fviz_eig(fviz_pcoa_jac, addlabels = TRUE, barfill = "blue", barcolor = "blue", linecolor = "red", main = "Scree plot showcasing the PCoAs variance explained (Jaccard)", ylim = c(0, 10))
+p26 <- fviz_eig(fviz_pcoa_jac, addlabels = TRUE, barfill = "blue", barcolor = "blue", linecolor = "red", main = "Scree plot showcasing the PCoAs variance explained (Jaccard)", ylim = c(0, 10))
 ggsave("plots/p25.png")
 # This proves and displays that all the PCs variance (100% )explained with the first 3 PCoA1, 2, and 3;
 
@@ -639,7 +667,8 @@ nrow(seq_meta_cleaned)
 
 treatment_dispersion <- betadisper(jaccard_dist, seq_meta_cleaned$Treatment) # betadisper - multivariate homogeneity of groups dispersions test
 homogeneity_anova <- anova(treatment_dispersion)
-print(homogeneity)
+print(homogeneity_anova)
+# PERMUTATIONS are more robust than a standard ANOVA;
 homogeneity_perm <- permutest(treatment_dispersion, permutations = 999) # is more robust than ANOVA, due to the complexity of microbiome studies and the violation of assumptions, permutest is a better option
 print(homogeneity_perm) # even though the p value is higher, it tests a permutation distribution of the F-statistic under the null-hypothesis
 homogeneity_perm_df <- data.frame(homogeneity_perm$tab) # just for an easier visual
@@ -650,7 +679,7 @@ homogeneity_perm_df <- data.frame(homogeneity_perm$tab) # just for an easier vis
 # Since we have significant dispersion p value results, we must tread carefully, we have more of a heterogeneous spread - so the results could be driven by some unknown spread, and not necessarily the true shift we are looking for
 # Both tests have a significant p value and hence, the treatment and control groups have different levels of dispersion.
 
-p26 <- boxplot(treatment_dispersion, main = "Dispersion Spread UD vs FV", xlab = "Group", ylab = "Distance to centroid")
+p27 <- boxplot(treatment_dispersion, main = "Dispersion Spread UD vs FV", xlab = "Group", ylab = "Distance to centroid")
 ggsave("plots/p26.png")
 # Although, now this plot contradicts what is mentioned above, since the difference spread is visually non-existent between the two groups.
 # This can be due to the high degrees of freedom regarding the samples, that any "microscopic" difference can be detected as significant.
@@ -757,18 +786,18 @@ print(PERMANOVA_model)
 # Different solution;
 ASCA_df <- ASCA_df <- as.data.frame(seq_asv_f_cleaned)
 ASCA_design <- model.matrix(~ seq_meta_cleaned$Treatment * seq_meta_cleaned$time) # create a design matrix with an interaction equation looking at relationship between the treatment and time
-ASCA_fit_model <- lm(as.matrix(ASCA_df) ~ ASCA_design)
+ASCA_fit_model <- lm(as.matrix(ASCA_df) ~ ASCA_design) # fitting a linear regression model on the cleaned ASV matrix accounting for our design matrix interaction equation
 interaction_cols <- grep("Treatment.*time", colnames(ASCA_design)) # collect the interaction column names
 
 interaction_component_matrix <- ASCA_design[, interaction_cols, drop = FALSE] %*%
   coef(ASCA_fit_model)[grep("Treatment.*time", rownames(coef(ASCA_fit_model))), , drop = FALSE]
 
-ASCA_int_pca <- prcomp(interaction_component_matrix, scale. = FALSE)
+ASCA_int_pca <- prcomp(interaction_component_matrix, scale. = FALSE) # Principal component extraction from the interaction componenet matrix
 
 ASCA_plot_df <- data.frame(PC1 = ASCA_int_pca$x[, 1], PC2 = if(ncol(ASCA_int_pca$x) > 1) ASCA_int_pca$x[, 2] else 0, Treatment = seq_meta_cleaned$Treatment, Time = seq_meta_cleaned$time, Subject_ID = seq_meta_cleaned$ID)
 # For PC2 in case there are values missing or the column does not exist it will choose the option that should work
 
-p27 <- ggplot(ASCA_plot_df, aes(x = PC1, y = PC2, colour = Treatment, shape = Time)) + geom_point(size = 2, alpha = 0.8) + geom_line(aes(group = Subject_ID), alpha = 0.3, colour = "grey50") + stat_ellipse(aes(group = Treatment), type = "t", linetype = 2) + labs(title = "RM-ASCA Trajection analysis", subtitle = "Track individual shifts with repsect to interaction components", x = "ASCA component 1", y = "ASCA component 2")
+p28 <- ggplot(ASCA_plot_df, aes(x = PC1, y = PC2, colour = Treatment, shape = Time)) + geom_point(size = 2, alpha = 0.8) + geom_line(aes(group = Subject_ID), alpha = 0.3, colour = "grey50") + stat_ellipse(aes(group = Treatment), type = "t", linetype = 2) + labs(title = "RM-ASCA Trajection analysis", subtitle = "Track individual shifts with repsect to interaction components", x = "ASCA component 1", y = "ASCA component 2")
 ggsave("plots/p27.png")
 # The second component is so infinitely small that the interaction behaviour cannot be seen. This can be due to the 1 degree of freedom given by time, and it seems that the second component has practically no explained variance.
 # Therefore, it could be recommended to plot on a 1 dimensional scale i.e. Time vs PC1;
@@ -778,7 +807,7 @@ ASCA_plot_df$Treatment <- as.factor(ASCA_plot_df$Treatment)
 
 # Provide individual trajectories with geom_line and individual data points on the plot with geom_point;
 # Also group mean trend and group mean points with stat_summary respectively;
-p28 <- ggplot(ASCA_plot_df, aes(x = Time, y = PC1, colour = Treatment, group = Subject_ID)) + geom_point(aes(shape = Time), size = 2) + geom_line(alpha = 0.3, linewidth = 0.8) + stat_summary(aes(group = Treatment), fun = mean, geom = "line", linewidth = 1.5, linetype = 1) + stat_summary(aes(group = Treatment), fun = mean, geom = "point", size = 4) + labs(title = "RM-ASCA Interaction Trajectory Profile", subtitle = "Individual subject paths and group mean trends along Component 1", x = "Time Point", y = "Interaction Component 1 Score") + 
+p29 <- ggplot(ASCA_plot_df, aes(x = Time, y = PC1, colour = Treatment, group = Subject_ID)) + geom_point(aes(shape = Time), size = 2) + geom_line(alpha = 0.3, linewidth = 0.8) + stat_summary(aes(group = Treatment), fun = mean, geom = "line", linewidth = 1.5, linetype = 1) + stat_summary(aes(group = Treatment), fun = mean, geom = "point", size = 4) + labs(title = "RM-ASCA Interaction Trajectory Profile", subtitle = "Individual subject paths and group mean trends along Component 1", x = "Time Point", y = "Interaction Component 1 Score") + 
 # The plot itself doesn't provide much information
 # Most likely the data was compressed and not expressed as I would of liked to
 # But at the end of the day this plot highlights that there actually is some sort of distinctive temporal shift within the 8 weeks for the FV group compared to the control UD group
@@ -935,7 +964,7 @@ imputed_feature <- colnames(X_train_imputed)[2] # use the first biomarker, chose
 imputed_density_df <- data.frame(Value = c(X_train_uni_mF[[imputed_feature]], X_train_imputed[[imputed_feature]]), Dataset = rep(c("Before-Imputation (NAs included)", "After-Imputation (via mF)"), c(length(X_train_uni_mF[[imputed_feature]]), length(X_train_uni_mF[[imputed_feature]]))))
 # simply just creating a data frame with the train split data used for the random forest imputation and the imputed data, with labels of data with NAs and without before and after imputation respectively
 # plot the differences in density;
-p29 <- ggplot(imputed_density_df, aes(x = Value, fill = Dataset)) + geom_density(alpha = 0.4) + labs(title = paste("Validating distribution for:", imputed_feature), x = "Feartue Value", y = "Density")
+p30 <- ggplot(imputed_density_df, aes(x = Value, fill = Dataset)) + geom_density(alpha = 0.4) + labs(title = paste("Validating distribution for:", imputed_feature), x = "Feartue Value", y = "Density")
 ggsave("plots/p29.png")
 #
 # NOTE: the density distribution for the before and after data imputation displays near perfect overlapping behaviour meaning that there is no unnatural or artificial spikes and random data imputation for the downstream analysis.
@@ -948,7 +977,7 @@ ggsave("plots/p29.png")
 #
 
 # plot the density side by side to get a different comparison perspective - separate on the "Dataset; (remove legend for more space)
-p30 <- ggplot(imputed_density_df, aes(x = Value, fill = Dataset)) + geom_density(alpha = 0.6) + facet_wrap(~ Dataset, scales = "free_y") + labs(title = paste("Side-by-Side distribution  validation for:", imputed_feature), x = "Feartue Value", y = "Density") + theme(legend.position = "none")
+p31 <- ggplot(imputed_density_df, aes(x = Value, fill = Dataset)) + geom_density(alpha = 0.6) + facet_wrap(~ Dataset, scales = "free_y") + labs(title = paste("Side-by-Side distribution  validation for:", imputed_feature), x = "Feartue Value", y = "Density") + theme(legend.position = "none")
 ggsave("plots/p30.png")
 
 #---- data validation completed
@@ -1141,7 +1170,7 @@ EN_importance <- data.frame(Feature = rownames(EN_coef)[-1], Importance = abs(as
   head(14)
 
 # We can visualise this data frame to see the resulting effects
-p31 <- ggplot(EN_importance, aes(x = reorder(Feature, Importance), y = Importance)) + geom_col(fill = "purple") + coord_flip() + labs(title = "EN Top 14 Features", x = "Feature", y = "|Coefficient|")
+p32 <- ggplot(EN_importance, aes(x = reorder(Feature, Importance), y = Importance)) + geom_col(fill = "purple") + coord_flip() + labs(title = "EN Top 14 Features", x = "Feature", y = "|Coefficient|")
 ggsave("plots/p31.png")
 
 # Similarly for the Random Forest model;
@@ -1152,13 +1181,13 @@ RF_importance <- data.frame(Feature = names(ranger::importance(RF_model)), Impor
 
 # FYI: ranger:: is included since there was likely a package conflict
 
-p32 <- ggplot(RF_importance, aes(x = reorder(Feature, Importance), y = Importance)) + geom_col(fill = "red") + coord_flip() + labs(title = "RF Top 14 Features", x = "Features", y = "Importance measure")
+p33 <- ggplot(RF_importance, aes(x = reorder(Feature, Importance), y = Importance)) + geom_col(fill = "red") + coord_flip() + labs(title = "RF Top 14 Features", x = "Features", y = "Importance measure")
 ggsave("plots/p32.png")
 
 # Lastly, for XGBoost;
 # https://xgboost.readthedocs.io/en/latest/r_docs/R-package/docs/reference/xgb.plot.importance.html
 XGB_importance <- xgb.importance(model = XGB_model)
-par(mar = c(5, 15, 4, 2))
+par(mar = c(5, 15, 4, 2)) # margin vectors to adjust the canvas when needed to fit all information
 xgb.plot.importance(XGB_importance, top_n = 14, main = "XGB Top 14 Features", xlab = "Importance measure", cex = 0.7, cex.axis = 0.7, left_margin = 17)
 title(ylab = "Features", line = 10)
 
@@ -1167,7 +1196,7 @@ title(ylab = "Features", line = 10)
 if(!require("Ckmeans.1d.dp")) install.packages("Ckmeans.1d.dp") # apparently this package is required to plot with ggplot below?
 library(Ckmeans.1d.dp)
 packageVersion("Ckmeans.1d.dp") # Version: 4.3.6 
-p33 <- xgb.ggplot.importance(XGB_importance, top_n = 14) + labs(title = "XGB Top 14 Features", y = "Importance measure", x = "Features") + guides(fill = FALSE) + scale_fill_manual(values = c("blue", "blue", "blue", "blue", "blue"))
+p34 <- xgb.ggplot.importance(XGB_importance, top_n = 14) + labs(title = "XGB Top 14 Features", y = "Importance measure", x = "Features") + guides(fill = FALSE) + scale_fill_manual(values = c("blue", "blue", "blue", "blue", "blue"))
 ggsave("plots/p33.png")
  # guides removes the legend, so there is more space on the plot itself.
 # scale_fill_manual to adjust the colours since it automatically clusters colours - in a non-trivial way.
@@ -1187,10 +1216,10 @@ ggsave("plots/p33.png")
 ROC_EN <- roc(y_test_num, as.vector(EN_prediction))
 
 # Plot all the AUC data for each model on the canvas
-p34 <- plot(ROC_EN, col = "purple", main = "Comparison of ROC curves for each model")
-p34 <- lines(ROC_RF, col = "red")
-p34 <- lines(ROC_XGB, col = "blue")
-p34 <- legend("bottomright", legend = c(paste("EN - AUC:", round(AUC_EN, 2)), paste("RF - AUC:", round(AUC_RF, 2)), paste("XGB - AUC:", round(AUC_XGB, 2))), col = c("purple", "red", "blue"), lwd = 2)
+p35 <- plot(ROC_EN, col = "purple", main = "Comparison of ROC curves for each model")
+p35 <- lines(ROC_RF, col = "red")
+p35 <- lines(ROC_XGB, col = "blue")
+p35 <- legend("bottomright", legend = c(paste("EN - AUC:", round(AUC_EN, 2)), paste("RF - AUC:", round(AUC_RF, 2)), paste("XGB - AUC:", round(AUC_XGB, 2))), col = c("purple", "red", "blue"), lwd = 2)
 
 ggsave("plots/p34.png")
 # Notice there are many immediate spikes from EN and overall XGBoost performed the best
@@ -1236,7 +1265,7 @@ ASCA_loadings <- data.frame(Taxon = colnames(seq_asv_f_cleaned), Loading = ASCA_
   arrange(desc(Abs_Loading)) # arrange the data in descending order
 
 # We shall plot the top 10 key species of taxa drivers;
-p35 <- head(ASCA_loadings, 10) %>%
+p36 <- head(ASCA_loadings, 10) %>%
   ggplot(aes(x = reorder(Taxon, Loading), y = Loading, fill = Loading > 0)) + geom_bar(stat = "identity") + coord_flip() + scale_fill_manual(values = c("TRUE" = "green", "FALSE" = "red")) + labs(title = "Top 10 Key taxonomic ASV drivers from RM-ASCA", subtitle = "Positive Loadings increase under FV, negatives decrease", x = "ASV / Taxon", y = "RM-ASCA Interaction Component 1 Loading") + theme(plot.title = element_text(hjust = 1), plot.subtitle = element_text(hjust = 1)) # this is to adjust the title location
 ggsave("plots/p35.png")
 # This displays a really nice plot of 6 positively loaded ASVs and 4 negatively.
@@ -1303,7 +1332,7 @@ print(paste("Key Taxa drivers only AUC:", round(auc(ROC_drivers), 2))) # round t
 # 3) Baseline ASVs
 #==================
 
-# Firstly, one must define the time points accordingly, from baseline to end point;
+# Firstly, one must define the time points accordingly, from baseline (w0) to end point (w8);
 w0_indices <- which(seq_meta_cleaned$time == "W0") # collects all W0 entries
 w0_mat <- seq_asv_f_cleaned[w0_indices, ] # create a matrix sub setting the ASVs with only the W0 entries
 w0_meta <- seq_meta_cleaned[w0_indices, ] # similarly creating a data item for the W0 meta data
@@ -1314,7 +1343,7 @@ w0_meta <- seq_meta_cleaned[w0_indices, ] # similarly creating a data item for t
 # Since both methods are faulty against negative values, Aitchison distance and Euclidean distances may be the best options
 w0_distance_bray <- vegdist(w0_mat, method = "bray") # calculates the dissimilarity indices in the microbial community
 w0_distance_jaccard <- vegdist(w0_mat, method = "jaccard")
-# w0_distance_aitchison <- vegdist(w0_mat, method = "aitchison") this throws an error as the method cannot be completed on CLR data
+# w0_distance_aitchison <- vegdist(w0_mat, method = "aitchison") !!! this throws an error as the method cannot be completed on CLR data !!!
 w0_distance_euclidean <- vegdist(w0_mat, method = "euclidean") # seems euclidean distance is the best bet here
 
 # https://github.com/vegandevs/vegan/issues/433, this discussion is about aitchison and euclidean distance measures pairing with CLR and rCLR, so we are on the right track.
@@ -1424,7 +1453,7 @@ perturbed_results_PFP_top_10 <- perturbed_results_PFP %>% # get the significant 
 
 perturbed_results_PFP_top_10$ASV <- reorder(perturbed_results_PFP_top_10$ASV, perturbed_results_PFP_top_10$Estimate) # reorders the values so that the largest at placed at the top for the Estimates and ASVs - nicer for the plot visualisation
 
-p36 <- ggplot(perturbed_results_PFP_top_10, aes(x = ASV, y = Estimate, fill = Direction)) + geom_bar(stat = "identity") + coord_flip() + scale_fill_manual(values = c("Increased (FV)" = "green", "Decreased (FV)" = "red")) + labs(title = "Top 10 ASVs of the Intervention Group (W8) - PFP (P value < 0.5)", x = "ASVs" , y = "Estimate (Beta diversity)") + theme(plot.title = element_text(hjust = 0.8))
+p37 <- ggplot(perturbed_results_PFP_top_10, aes(x = ASV, y = Estimate, fill = Direction)) + geom_bar(stat = "identity") + coord_flip() + scale_fill_manual(values = c("Increased (FV)" = "green", "Decreased (FV)" = "red")) + labs(title = "Top 10 ASVs of the Intervention Group (W8) - PFP (P value < 0.5)", x = "ASVs" , y = "Estimate (Beta diversity)") + theme(plot.title = element_text(hjust = 0.8))
 ggsave("plots/p36.png")
 # Interestingly enough, the results are nearly the opposite from RM-ASCA pipeline in terms of positive and negative contribution of species.
 # Additionally, while again stressing the fact that there is a possibility of false positives, but this plot showcases the ASVs that contributed the most strength - perturbed the most over the 8 weeks of intervention compared to the control group
