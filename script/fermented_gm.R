@@ -19,13 +19,13 @@ packageVersion("readxl") # the version of package used for this project: 1.5.0.1
 #
 # PLOTS are labelled in a trivial numerical order just for simplicity in saving them to a folder
 
-seq_data <- read_xlsx("ASV_table_dryad.xlsx") 
+seq_data <- read_xlsx("data/ASV_table_dryad.xlsx") 
 
 # output of NGS via Illumina MiSeq -> microbial alpha, 
 # beta diversity, and amplicon sequencing variants 
 # (ASVs = exact sequence variants, inferred single DNA sequences from high-throughput marker gene analyses)
 
-inf_markers <- read.csv("Inflammatory_markers.csv", na = c(".", "", "NA"))
+inf_markers <- read.csv("data/Inflammatory_markers.csv", na = c(".", "", "NA"))
 # DRYAD specifies that "." represents an NA value = missing
 
 # inflammatory markers measured in serum collected at two time points: at baseline and at 8 weeks
@@ -500,7 +500,7 @@ aitchison_var_PCo2 <- round((aitchison_pcoa$eig[2] / sum(aitchison_pcoa$eig[aitc
 # We also now have information that over 80% of the variance is explained already by PC1 and PC2 combined
 
 p21 <- ggplot(aitchison_df, aes(x = PCo1, y = PCo2, colour = Treatment)) + geom_point(aes(shape = is_outlier), size = 1, alpha = 0.8) + stat_ellipse(type = "t", linetype = 2, level = 0.95) + geom_text(data = filter(aitchison_df, is_outlier), aes(label = Subject_ID), vjust = -1, colour = "black", size = 1) + labs(title = "Aitchison distance PCoA (rCLR)", x = paste0("PCo1 (", aitchison_var_PCo1, "%)"), y = paste0("PCo2 (", aitchison_var_PCo2, "%)"))
-ggsave("plots/p20.png")
+ggsave("plots/p21.png")
 # provides the PCoA plot of PC1 vs PC2 with treatment of diet as the colour coding. The data is mean centered and shows outliers that are 3 sd away from the center, with an ellipse encapsulating the majority of data
 # from the plot one can see 2 direct outliers, but we can verify this with the table summary;
 table(aitchison_df$is_outlier)
@@ -514,7 +514,7 @@ table(aitchison_df$is_outlier)
 
 fviz_pcoa <- as_factoextra_pca(ind.coord = aitchison_pcoa$points, eig = aitchison_pcoa$eig) # convert the pcoa object from cmdscale via this function utilising the eigenvalues = TRUE arguement
 p22 <- fviz_eig(fviz_pcoa, addlabels = TRUE, barfill = "blue", barcolor = "blue", linecolor = "red", main = "Scree plot showcasing the PCoAs variance explained (Aitchison)", ylim = c(0, 46))
-ggsave("plots/p21.png")
+ggsave("plots/p22.png")
 # This proves and displays that all the PCs variance (100% )explained with the first 3 PCoA1, 2, and 3;
 
 # We can also see the connection between other PCs;
@@ -532,7 +532,7 @@ aitchison_var_PCo3 <- round((aitchison_PCo3$eig[3] / sum(aitchison_PCo3$eig[aitc
 # We also now have information that over 80% of the variance is explained already by PC1 and PC2 combined, which is already very strong values
 
 p23 <- ggplot(aitchison_df_PCo3, aes(x = PCo1, y = PCo3, colour = Treatment)) + geom_point(aes(shape = is_outlier), size = 1, alpha = 0.8) + stat_ellipse(type = "t", linetype = 2, level = 0.95) + geom_text(data = filter(aitchison_df_PCo3, is_outlier), aes(label = Subject_ID), vjust = -1, colour = "black", size = 1) + labs(title = "Aitchison distance PCoA (rCLR)", x = paste0("PCo1 (", aitchison_var_PCo1, "%)"), y = paste0("PCo3 (", aitchison_var_PCo3, "%)"))
-ggsave("plots/p22.png")
+ggsave("plots/p23.png")
 # No distinct cluster either, more outliers, and much less explained variance. So from my judgement I will stick to PC1 and PC2 for the majority for explained variance of my data
 
 #======
@@ -559,7 +559,7 @@ jaccard_pcoa <- cmdscale(jaccard_distance, k = 2, eig = TRUE, add = TRUE) # add 
 jaccard_df <- data.frame(PCo1 = jaccard_pcoa$points[, 1], PCo2 = jaccard_pcoa$points[, 2], Treatment = seq_meta$Treatment, Week = as.factor(seq_meta$time), Subject_ID = seq_meta$ID) # gather the information from score points and meta data to construct a jaccard data frame viable to use for plotting
 
 p24 <- ggplot(jaccard_df, aes(x = PCo1, y = PCo2, colour = Treatment, shape = Week)) + geom_point(size = 1, alpha = 0.8) + stat_ellipse(aes(group = Treatment), type = "t", linetype = 2) + labs(title = "Beta diversity Jaccard distance PCoA (rCLR)", subtitle = "Exploring microbial community shifts across treatment and time", x = "PC1", y = "PC2")
-ggsave("plots/p23.png")
+ggsave("plots/p24.png")
 # THIS SHOWS THAT JACCARD INDEX CANNOT BE PLOTTED ACROSS rCLR data because we require binary values, and negative values from rCLR will distort our analysis as seen above;
 
 seq_asv_binary_raw <- ifelse(seq_asv_f_mat > 0, 1, 0) # USE THE "RAW" MATRIX SEQ DATA
@@ -574,7 +574,7 @@ jaccard_var_PCo1 <- round((jaccard_pcoa_raw$eig[1] / sum(jaccard_pcoa_raw$eig[ja
 jaccard_var_PCo2 <- round((jaccard_pcoa_raw$eig[2] / sum(jaccard_pcoa_raw$eig[jaccard_pcoa_raw$eig > 0])) * 100, 1)
 
 p25 <- ggplot(jaccard_df_raw, aes(x = PCo1, y = PCo2, colour = Treatment)) + geom_point(aes(shape = is_outlier), size = 1, alpha = 0.8) + stat_ellipse(aes(group = Treatment), type = "t", linetype = 2) + labs(title = "Beta diversity Jaccard distance PCoA", subtitle = "Exploring microbial community shifts across treatment", x = paste0("PCo1 (", jaccard_var_PCo1, "%)"), y = paste0("PCo2 (", jaccard_var_PCo2, "%)"))
-ggsave("plots/p24.png")
+ggsave("plots/p25.png")
 # Now this seems much more natural, with some slightly distinctive clusters appearing within the data
 
 # NOTICEABLY, very little explained variance is displayed through PC1 and PC2
@@ -595,7 +595,7 @@ table(jaccard_df_raw$is_outlier)
 
 fviz_pcoa_jac <- as_factoextra_pca(ind.coord = jaccard_pcoa_raw$points, eig = jaccard_pcoa_raw$eig) # convert the pcoa object from cmdscale via this function utilising the eigenvalues = TRUE arguement
 p26 <- fviz_eig(fviz_pcoa_jac, addlabels = TRUE, barfill = "blue", barcolor = "blue", linecolor = "red", main = "Scree plot showcasing the PCoAs variance explained (Jaccard)", ylim = c(0, 10))
-ggsave("plots/p25.png")
+ggsave("plots/p26.png")
 # This proves and displays that all the PCs variance (100% )explained with the first 3 PCoA1, 2, and 3;
 
 
@@ -678,9 +678,9 @@ homogeneity_perm_df <- data.frame(homogeneity_perm$tab) # just for an easier vis
 
 # Since we have significant dispersion p value results, we must tread carefully, we have more of a heterogeneous spread - so the results could be driven by some unknown spread, and not necessarily the true shift we are looking for
 # Both tests have a significant p value and hence, the treatment and control groups have different levels of dispersion.
-
-p27 <- boxplot(treatment_dispersion, main = "Dispersion Spread UD vs FV", xlab = "Group", ylab = "Distance to centroid")
-ggsave("plots/p26.png")
+# If the plot seems squashed, you may need to reset the plotting settings via dev.off(), before the boxplot
+p27 <- boxplot(treatment_dispersion, main = "Dispersion Spread UD vs FV", xlab = "Group", ylab = "Distance to centroid", par = list(mar = c(0, 0, 5, 2)))
+ggsave("plots/p27.png")
 # Although, now this plot contradicts what is mentioned above, since the difference spread is visually non-existent between the two groups.
 # This can be due to the high degrees of freedom regarding the samples, that any "microscopic" difference can be detected as significant.
 
@@ -798,7 +798,7 @@ ASCA_plot_df <- data.frame(PC1 = ASCA_int_pca$x[, 1], PC2 = if(ncol(ASCA_int_pca
 # For PC2 in case there are values missing or the column does not exist it will choose the option that should work
 
 p28 <- ggplot(ASCA_plot_df, aes(x = PC1, y = PC2, colour = Treatment, shape = Time)) + geom_point(size = 2, alpha = 0.8) + geom_line(aes(group = Subject_ID), alpha = 0.3, colour = "grey50") + stat_ellipse(aes(group = Treatment), type = "t", linetype = 2) + labs(title = "RM-ASCA Trajection analysis", subtitle = "Track individual shifts with repsect to interaction components", x = "ASCA component 1", y = "ASCA component 2")
-ggsave("plots/p27.png")
+ggsave("plots/p28.png")
 # The second component is so infinitely small that the interaction behaviour cannot be seen. This can be due to the 1 degree of freedom given by time, and it seems that the second component has practically no explained variance.
 # Therefore, it could be recommended to plot on a 1 dimensional scale i.e. Time vs PC1;
 
@@ -814,7 +814,7 @@ p29 <- ggplot(ASCA_plot_df, aes(x = Time, y = PC1, colour = Treatment, group = S
 
 # Maybe we can adjust the plot to make it look nicer or more concrete;
   facet_wrap(~ Treatment, scales = "free_y") + theme_minimal(base_size = 12)
-ggsave("plots/p28.png")
+ggsave("plots/p29.png")
 
 #========================================================================
 # Machine Learning - Are there distinct patterns in microbiome responses
@@ -965,7 +965,7 @@ imputed_density_df <- data.frame(Value = c(X_train_uni_mF[[imputed_feature]], X_
 # simply just creating a data frame with the train split data used for the random forest imputation and the imputed data, with labels of data with NAs and without before and after imputation respectively
 # plot the differences in density;
 p30 <- ggplot(imputed_density_df, aes(x = Value, fill = Dataset)) + geom_density(alpha = 0.4) + labs(title = paste("Validating distribution for:", imputed_feature), x = "Feartue Value", y = "Density")
-ggsave("plots/p29.png")
+ggsave("plots/p30.png")
 #
 # NOTE: the density distribution for the before and after data imputation displays near perfect overlapping behaviour meaning that there is no unnatural or artificial spikes and random data imputation for the downstream analysis.
 # One can expect more right skewness for inflammatory markers, since the majority of the population have a lower baseline concentration for a biomarker derived from  a circulating gut microbiome (TMAO1 - TriMethylAmine N-Oxide 1 -> functioning as a powerful circulating gut microbiome and active mediator of vascular inflammation)
@@ -978,7 +978,7 @@ ggsave("plots/p29.png")
 
 # plot the density side by side to get a different comparison perspective - separate on the "Dataset; (remove legend for more space)
 p31 <- ggplot(imputed_density_df, aes(x = Value, fill = Dataset)) + geom_density(alpha = 0.6) + facet_wrap(~ Dataset, scales = "free_y") + labs(title = paste("Side-by-Side distribution  validation for:", imputed_feature), x = "Feartue Value", y = "Density") + theme(legend.position = "none")
-ggsave("plots/p30.png")
+ggsave("plots/p31.png")
 
 #---- data validation completed
 # Continue to model training:
@@ -1171,7 +1171,7 @@ EN_importance <- data.frame(Feature = rownames(EN_coef)[-1], Importance = abs(as
 
 # We can visualise this data frame to see the resulting effects
 p32 <- ggplot(EN_importance, aes(x = reorder(Feature, Importance), y = Importance)) + geom_col(fill = "purple") + coord_flip() + labs(title = "EN Top 14 Features", x = "Feature", y = "|Coefficient|")
-ggsave("plots/p31.png")
+ggsave("plots/p32.png")
 
 # Similarly for the Random Forest model;
 RF_importance <- data.frame(Feature = names(ranger::importance(RF_model)), Importance = ranger::importance(RF_model)) %>%
@@ -1182,7 +1182,7 @@ RF_importance <- data.frame(Feature = names(ranger::importance(RF_model)), Impor
 # FYI: ranger:: is included since there was likely a package conflict
 
 p33 <- ggplot(RF_importance, aes(x = reorder(Feature, Importance), y = Importance)) + geom_col(fill = "red") + coord_flip() + labs(title = "RF Top 14 Features", x = "Features", y = "Importance measure")
-ggsave("plots/p32.png")
+ggsave("plots/p33.png")
 
 # Lastly, for XGBoost;
 # https://xgboost.readthedocs.io/en/latest/r_docs/R-package/docs/reference/xgb.plot.importance.html
@@ -1197,7 +1197,7 @@ if(!require("Ckmeans.1d.dp")) install.packages("Ckmeans.1d.dp") # apparently thi
 library(Ckmeans.1d.dp)
 packageVersion("Ckmeans.1d.dp") # Version: 4.3.6 
 p34 <- xgb.ggplot.importance(XGB_importance, top_n = 14) + labs(title = "XGB Top 14 Features", y = "Importance measure", x = "Features") + guides(fill = FALSE) + scale_fill_manual(values = c("blue", "blue", "blue", "blue", "blue"))
-ggsave("plots/p33.png")
+ggsave("plots/p34.png")
  # guides removes the legend, so there is more space on the plot itself.
 # scale_fill_manual to adjust the colours since it automatically clusters colours - in a non-trivial way.
 
@@ -1221,7 +1221,7 @@ p35 <- lines(ROC_RF, col = "red")
 p35 <- lines(ROC_XGB, col = "blue")
 p35 <- legend("bottomright", legend = c(paste("EN - AUC:", round(AUC_EN, 2)), paste("RF - AUC:", round(AUC_RF, 2)), paste("XGB - AUC:", round(AUC_XGB, 2))), col = c("purple", "red", "blue"), lwd = 2)
 
-ggsave("plots/p34.png")
+ggsave("plots/p35.png")
 # Notice there are many immediate spikes from EN and overall XGBoost performed the best
 
 # Although XGBoost performed the best it still reflect moderate predcitive power for this task.
@@ -1267,7 +1267,7 @@ ASCA_loadings <- data.frame(Taxon = colnames(seq_asv_f_cleaned), Loading = ASCA_
 # We shall plot the top 10 key species of taxa drivers;
 p36 <- head(ASCA_loadings, 10) %>%
   ggplot(aes(x = reorder(Taxon, Loading), y = Loading, fill = Loading > 0)) + geom_bar(stat = "identity") + coord_flip() + scale_fill_manual(values = c("TRUE" = "green", "FALSE" = "red")) + labs(title = "Top 10 Key taxonomic ASV drivers from RM-ASCA", subtitle = "Positive Loadings increase under FV, negatives decrease", x = "ASV / Taxon", y = "RM-ASCA Interaction Component 1 Loading") + theme(plot.title = element_text(hjust = 1), plot.subtitle = element_text(hjust = 1)) # this is to adjust the title location
-ggsave("plots/p35.png")
+ggsave("plots/p36.png")
 # This displays a really nice plot of 6 positively loaded ASVs and 4 negatively.
 # What this tells us - that ASV9 and ASV8 for example contribute with the most positive strength to the interaction effect (Treatment * time)
 
@@ -1454,7 +1454,7 @@ perturbed_results_PFP_top_10 <- perturbed_results_PFP %>% # get the significant 
 perturbed_results_PFP_top_10$ASV <- reorder(perturbed_results_PFP_top_10$ASV, perturbed_results_PFP_top_10$Estimate) # reorders the values so that the largest at placed at the top for the Estimates and ASVs - nicer for the plot visualisation
 
 p37 <- ggplot(perturbed_results_PFP_top_10, aes(x = ASV, y = Estimate, fill = Direction)) + geom_bar(stat = "identity") + coord_flip() + scale_fill_manual(values = c("Increased (FV)" = "green", "Decreased (FV)" = "red")) + labs(title = "Top 10 ASVs of the Intervention Group (W8) - PFP (P value < 0.5)", x = "ASVs" , y = "Estimate (Beta diversity)") + theme(plot.title = element_text(hjust = 0.8))
-ggsave("plots/p36.png")
+ggsave("plots/p37.png")
 # Interestingly enough, the results are nearly the opposite from RM-ASCA pipeline in terms of positive and negative contribution of species.
 # Additionally, while again stressing the fact that there is a possibility of false positives, but this plot showcases the ASVs that contributed the most strength - perturbed the most over the 8 weeks of intervention compared to the control group
 # So eat more fermented vegetables, so you can increase your microbial diversity and be beta diversity superior to others.
